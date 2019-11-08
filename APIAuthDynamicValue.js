@@ -29,9 +29,10 @@ var APIAuthDynamicValue = function () {
     this.evaluate = function (context) {
         var request = context.getCurrentRequest();
         var uri = this.parseURL(request.url);
+        var method = request.method.toUpperCase().trim();
         tokens = [];
         tokens.push(uri.pathname);
-        if( uri.search !== undefined ) {
+        if (uri.search !== undefined) {
             tokens.push(uri.search);
         }
         uri = tokens.join("?");
@@ -41,20 +42,29 @@ var APIAuthDynamicValue = function () {
             headers[h.toLowerCase().trim()] = request.headers[h].trim();
         }
 
-        if (headers['content-type'] === undefined) {
-            return "missing Content-Type header";
-        }
-
         if (headers['date'] === undefined) {
             return "missing Date (RFC1123) header";
         }
 
+        if (headers['content-type'] === undefined) {
+            if (request.body.length == 0) {
+                headers['content-type'] = '';
+            } else {
+                return "missing Content-Type header";
+            }
+
+        }
+
         if (headers['content-md5'] === undefined) {
-            return "missing Content-MD5 header";
+            if (request.body.length == 0) {
+                headers['content-md5'] = '';
+            } else {
+                return "missing Content-MD5 header";
+            }
         }
 
         var canonicalArray = [
-            request.method.toUpperCase().trim(),
+            method,
             headers['content-type'],
             headers['content-md5'],
             uri,
@@ -63,7 +73,7 @@ var APIAuthDynamicValue = function () {
 
         console.log(canonicalArray.join(","));
 
-        return 'APIAuth '+this.key+':'+this.sha1(canonicalArray.join(","), this.secret);
+        return 'APIAuth ' + this.key + ':' + this.sha1(canonicalArray.join(","), this.secret);
     };
     this.title = function (context) {
         return 'API AUTH';
